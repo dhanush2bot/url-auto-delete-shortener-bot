@@ -50,14 +50,28 @@ class Bot(Client):
         limit: int,
         offset: int = 0,
     ) -> Optional[AsyncGenerator["types.Message", None]]:
-        # ... (unchanged)
+        current = offset
+        while True:
+            new_diff = min(200, limit - current)
+            if new_diff <= 0:
+                return
+            messages = await self.get_messages(chat_id, list(range(current, current+new_diff+1)))
+            for message in messages:
+                yield message
+                current += 1
 
 # Register the signal handler for SIGTERM
 def sigterm_handler(signal, frame):
     logging.info("Received SIGTERM signal. Stopping the bot gracefully.")
     app.stop()
 
-signal.signal(signal.SIGTERM, sigterm_handler)
+if __name__ == "__main__":
+    # Get logging configurations
+    logging.config.fileConfig('logging.conf')
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger("pyrogram").setLevel(logging.ERROR)
+    logging.getLogger("imdbpy").setLevel(logging.ERROR)
 
-app = Bot()
-app.run()
+    app = Bot()
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    app.run()
